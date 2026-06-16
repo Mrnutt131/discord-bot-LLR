@@ -9,7 +9,7 @@ import {
     PermissionFlagsBits,
     ChannelType,
     MessageFlags,
-    EmbedBuilder // นำเข้า EmbedBuilder สำหรับทำกล่องข้อความสุดสวย
+    EmbedBuilder 
 } from 'discord.js';
 
 const client = new Client({
@@ -23,23 +23,24 @@ const client = new Client({
 // ตัวแปรสำหรับเก็บข้อมูล Timer ของแต่ละห้องตั๋ว
 const ticketTimers = new Map();
 
-// ดึงเวลา Timeout จาก .env (ถ้าลืมตั้งจะปรับให้อัตโนมัติที่ 10 นาที)
+// ดึงเวลา Timeout จาก .env (ถ้าไม่มีจะปรับให้อัตโนมัติที่ 10 นาที)
 const TIMEOUT_DURATION = parseInt(process.env.TICKET_TIMEOUT) || 600000;
 
+// 🆔 ใส่ ID ยศแอดมิน/สต๊าฟที่พี่ให้มาโดยตรง
+const ADMIN_ROLE_ID = '1507972493456179230'; 
+
 client.once(Events.ClientReady, async readyClient => {
-    console.log(`👷 บอทช่วยเหลือ v2 (Embed หรู + ซ่อมบั๊กข้อความซ้ำ) ออนไลน์แล้ว: ${readyClient.user.tag}`);
+    console.log(`👷 บอทช่วยเหลือ v2.1 (ล็อคสิทธิ์ Owner + ยศเฉพาะ) ออนไลน์แล้ว: ${readyClient.user.tag}`);
 });
 
 // ฟังก์ชันสำหรับเริ่มนับถอยหลังปิดห้อง
 function startTicketTimeout(channel) {
-    // ล้างค่าเก่าออกก่อนเสมอถ้ามีอยู่แล้วเพื่อไม่ให้เกิดการซ้อนกัน
     if (ticketTimers.has(channel.id)) {
         clearTimeout(ticketTimers.get(channel.id));
     }
 
     const timer = setTimeout(async () => {
         try {
-            // สร้าง Embed แจ้งเตือนปิดห้องแบบสวยงาม
             const timeoutEmbed = new EmbedBuilder()
                 .setColor('#ff4757')
                 .setTitle('⚠️ ระบบปิดห้องอัตโนมัติ')
@@ -66,6 +67,11 @@ client.on(Events.MessageCreate, async message => {
     if (message.author.bot) return;
 
     if (message.content === '!setup') {
+        // 🔒 เช็กว่าคนพิมพ์ใช่เจ้าของเซิร์ฟเวอร์ (Server Owner) ไหม ถ้าไม่ใช่...บอทจะเมินทันที
+        if (message.author.id !== message.guild.ownerId) {
+            return; 
+        }
+
         const button = new ButtonBuilder()
             .setCustomId('open_ticket')
             .setLabel('📩 ติดต่อทีมงาน / แจ้งปัญหา')
@@ -73,7 +79,6 @@ client.on(Events.MessageCreate, async message => {
 
         const row = new ActionRowBuilder().addComponents(button);
 
-        // สร้าง Embed หน้าต่างต้อนรับหลักตรงห้อง Setup
         const setupEmbed = new EmbedBuilder()
             .setColor('#00adb5')
             .setTitle('🌴 LOMLAYRAK SUPPORT SYSTEM 🌊')
@@ -91,7 +96,6 @@ client.on(Events.MessageCreate, async message => {
         return;
     }
 
-    // ⚡ แก้ไขจุดนี้: เช็กให้ชัวร์ว่าเป็นห้องตั๋ว และข้อความต้องไม่ได้มาจากระบบบอทส่ง Embed เตือน
     if (message.channel.name && message.channel.name.startsWith('ticket-')) {
         startTicketTimeout(message.channel);
     }
@@ -118,24 +122,36 @@ client.on(Events.InteractionCreate, async interaction => {
         await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
 
         try {
+            // ตั้งค่าสิทธิ์ขั้นต้น (ปิดคนทั่วไป, เปิดให้คนแจ้ง)
+            const permissionOverwrites = [
+                {
+                    id: guild.roles.everyone.id,
+                    deny: [PermissionFlagsBits.ViewChannel],
+                },
+                {
+                    id: member.id,
+                    allow: [
+                        PermissionFlagsBits.ViewChannel,
+                        PermissionFlagsBits.SendMessages,
+                        PermissionFlagsBits.ReadMessageHistory
+                    ],
+                },
+                {
+                    // 🛠️ ให้สิทธิ์ยศแอดมินที่กำหนด มองเห็นและตอบในห้องตั๋วนี้ได้ด้วย
+                    id: ADMIN_ROLE_ID,
+                    allow: [
+                        PermissionFlagsBits.ViewChannel,
+                        PermissionFlagsBits.SendMessages,
+                        PermissionFlagsBits.ReadMessageHistory
+                    ]
+                }
+            ];
+
             const ticketChannel = await guild.channels.create({
                 name: channelName,
                 type: ChannelType.GuildText,
                 parent: process.env.CATEGORY_TICKET,
-                permissionOverwrites: [
-                    {
-                        id: guild.roles.everyone.id,
-                        deny: [PermissionFlagsBits.ViewChannel],
-                    },
-                    {
-                        id: member.id,
-                        allow: [
-                            PermissionFlagsBits.ViewChannel,
-                            PermissionFlagsBits.SendMessages,
-                            PermissionFlagsBits.ReadMessageHistory
-                        ],
-                    }
-                ],
+                permissionOverwrites: permissionOverwrites,
             });
 
             const closeButton = new ButtonBuilder()
@@ -145,7 +161,6 @@ client.on(Events.InteractionCreate, async interaction => {
 
             const row = new ActionRowBuilder().addComponents(closeButton);
 
-            // 👑 จัดทำ Embed สุดหรูส่งเข้าไปในห้องตั๋วที่สร้างใหม่
             const ticketEmbed = new EmbedBuilder()
                 .setColor('#2ed573')
                 .setTitle('📩 ห้องติดต่อทีมงานส่วนตัว')
@@ -158,15 +173,15 @@ client.on(Events.InteractionCreate, async interaction => {
                 .setFooter({ text: 'หากคุยเสร็จสิ้นแล้ว สามารถกดปุ่มด้านล่างเพื่อปิดห้องได้ครับ' })
                 .setTimestamp();
 
+            // 🛠️ เปลี่ยนการแท็กเป็น ID ยศที่กำหนดเรียบร้อย แท็กเด้งรอบเดียวสวยๆ ไม่ซ้อนกัน
             await ticketChannel.send({
-                content: `<@${member.id}> | ทีมงาน <@&${guild.roles.everyone.id}>`, // ส่งข้อความแท็กด้านนอกกล่องเพื่อให้ระบบแจ้งเตือนเด้ง
+                content: `<@${member.id}> | ทีมงาน <@&${ADMIN_ROLE_ID}>`, 
                 embeds: [ticketEmbed],
                 components: [row]
             });
 
             await interaction.editReply({ content: `✅ สร้างช่องช่วยเหลือส่วนตัวสำเร็จแล้ว! คลิกไปที่นี่ได้เลยครับ: <#${ticketChannel.id}>` });
 
-            // เริ่มนับถอยหลังตั้งแต่สร้างห้องเสร็จ (รอบแรก)
             startTicketTimeout(ticketChannel);
 
         } catch (error) {
