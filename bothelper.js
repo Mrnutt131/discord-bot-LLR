@@ -9,7 +9,8 @@ import {
     PermissionFlagsBits,
     ChannelType,
     MessageFlags,
-    EmbedBuilder 
+    EmbedBuilder,
+    ActivityType 
 } from 'discord.js';
 
 const client = new Client({
@@ -106,7 +107,7 @@ client.once(Events.ClientReady, async readyClient => {
 
     // ระบบตั้งสถานะบอท (Activity)
     setInterval(() => {
-        client.user.setActivity('🛡️ดูแลช่วยเหลือทุกคนใน LOMLAYR AK', { type: ActivityType.Watching }); 
+        client.user.setActivity('🛡️ดูแลช่วยเหลือทุกคนใน LOMLAYRAK', { type: ActivityType.Watching }); 
     }, 60000);
 });
 
