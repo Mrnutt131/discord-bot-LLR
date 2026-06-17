@@ -17,4 +17,13 @@ client.on(Events.InteractionCreate, async interaction => {
     }
 });
 
+client.once(Events.ClientReady, (c) => {
+    console.log(`📢 บอทประกาศข่าวสาร (Broadcaster) ออนไลน์แล้ว: ${c.user.tag}`);
+
+    // ระบบตั้งสถานะบอท: ใช้ Playing (กำลังประกาศ) หรือ Listening (ฟังประกาศ)
+    setInterval(() => {
+        client.user.setActivity('📣 ฉันจะประกาศข่าวสารสำคัญของ LOMLAYRAK เอง', { type: ActivityType.Playing }); 
+    }, 60000);
+});
+
 client.login(process.env.TOKEN);
