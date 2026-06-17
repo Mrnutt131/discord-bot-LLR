@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { Client, Events, GatewayIntentBits } from 'discord.js';
+import { Client, Events, GatewayIntentBits, ActivityType } from 'discord.js'; // เพิ่ม ActivityType ตรงนี้
 
 const client = new Client({ 
     intents: [GatewayIntentBits.Guilds] 
@@ -20,9 +20,12 @@ client.on(Events.InteractionCreate, async interaction => {
 client.once(Events.ClientReady, (c) => {
     console.log(`📢 บอทประกาศข่าวสาร (Broadcaster) ออนไลน์แล้ว: ${c.user.tag}`);
 
-    // ระบบตั้งสถานะบอท: ใช้ Playing (กำลังประกาศ) หรือ Listening (ฟังประกาศ)
+    // ตั้งค่า Activity ครั้งแรก
+    client.user.setActivity('📣ประกาศข่าวสารสำคัญของ LOMLAYRAK', { type: ActivityType.Playing });
+
+    // ระบบตั้งสถานะบอทซ้ำทุก 60 วินาที
     setInterval(() => {
-        client.user.setActivity('📣 ฉันจะประกาศข่าวสารสำคัญของ LOMLAYRAK เอง', { type: ActivityType.Playing }); 
+        client.user.setActivity('📣ประกาศข่าวสารสำคัญของ LOMLAYRAK', { type: ActivityType.Playing }); 
     }, 60000);
 });
 
