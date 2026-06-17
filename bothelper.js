@@ -101,6 +101,15 @@ client.on(Events.MessageCreate, async message => {
     }
 });
 
+client.once(Events.ClientReady, async readyClient => {
+    console.log(`👷 บอทช่วยเหลือ LOMLAYRAK ออนไลน์แล้ว: ${readyClient.user.tag}`);
+
+    // ระบบตั้งสถานะบอท (Activity)
+    setInterval(() => {
+        client.user.setActivity('🛡️ดูแลช่วยเหลือทุกคนใน LOMLAYR AK', { type: ActivityType.Watching }); 
+    }, 60000);
+});
+
 // ตรวจจับเมื่อมีคนมากดปุ่ม
 client.on(Events.InteractionCreate, async interaction => {
     if (!interaction.isButton()) return;
@@ -183,7 +192,7 @@ client.on(Events.InteractionCreate, async interaction => {
             await interaction.editReply({ content: `✅ สร้างช่องช่วยเหลือส่วนตัวสำเร็จแล้ว! คลิกไปที่นี่ได้เลยครับ: <#${ticketChannel.id}>` });
 
             startTicketTimeout(ticketChannel);
-
+            
         } catch (error) {
             console.error('เกิดข้อผิดพลาดในการสร้างห้อง:', error);
             await interaction.editReply({ content: '❌ ไม่สามารถสร้างห้องได้ กรุณาเช็กความถูกต้องของข้อมูลระบบครับ' });
