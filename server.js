@@ -3,3 +3,6 @@ console.log("🚀 กำลังเริ่มต้นระบบบอท L
 import './index.js';
 import './botwelcome.js';
 import './bothelper.js';
+import './guardian.js';
+
+console.log("🌊 LomLayRak Ecosystem Started Successfully!");
