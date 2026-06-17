@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { Client, Events, GatewayIntentBits, ActivityType } from 'discord.js'; // เพิ่ม ActivityType ตรงนี้
+import { ActivityType, Client, Events, GatewayIntentBits } from 'discord.js';
 
 const client = new Client({ 
     intents: [GatewayIntentBits.Guilds] 
