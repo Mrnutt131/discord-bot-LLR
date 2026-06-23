@@ -4,7 +4,6 @@ import './index.js';
 import './botwelcome.js';
 import './bothelper.js';
 import './guardian.js';
-import './guardianadminlog.js';
 
 
 console.log("🌊 LomLayRak Ecosystem Started Successfully!");
