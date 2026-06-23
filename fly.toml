@@ -1,0 +1,21 @@
+app = "discord-bot-llr"
+primary_region = "sin" # สิงคโปร์ใกล้ไทยที่สุด
+
+[build]
+  # บังคับให้ติดตั้ง package และรันด้วย node
+  builder = "paketobuildpacks/builder:base"
+
+[env]
+  PORT = "8080"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = false # ปิด auto-stop เพื่อให้บอทรัน 24/7
+  auto_start_machines = true
+  min_machines_running = 1
+
+[[services]]
+  protocol = "tcp"
+  internal_port = 8080
+  processes = ["app"]
