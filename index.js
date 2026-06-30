@@ -34,33 +34,25 @@ client.on(Events.InteractionCreate, async interaction => {
 
     if (interaction.commandName === 'broadcast') {
         const channel = interaction.options.getChannel('channel');
-        const title = interaction.options.getString('title');
         const message = interaction.options.getString('message');
         const attachment = interaction.options.getAttachment('file');
 
-        // ตรวจสอบว่าส่งไปห้องข้อความใช่หรือไม่
         if (!channel.isTextBased()) {
             return interaction.reply({ content: '❌ เลือกได้เฉพาะช่องข้อความเท่านั้น!', ephemeral: true });
         }
 
-        // สร้าง Embed
-        const embed = new EmbedBuilder()
-            .setTitle(title)
-            .setDescription(message)
-            .setColor(0x0099FF)
-            .setTimestamp()
-            .setFooter({ text: 'LOMLAYRAK System' });
+        // เตรียมข้อมูลส่งแบบธรรมดา
+        let options = {
+            content: message // ส่งแค่ข้อความธรรมดา
+        };
 
-        const options = { embeds: [embed] };
-
-        // ถ้ามีไฟล์แนบมาด้วย
+        // ถ้ามีไฟล์แนบ ก็แค่ใส่เข้าไปใน options.files
         if (attachment) {
-            embed.setImage(`attachment://${attachment.name}`);
             options.files = [attachment];
         }
 
         try {
-            await channel.send(options);
+            await channel.send(options); // ส่งแบบธรรมดา
             await interaction.reply({ content: `✅ ส่งประกาศไปที่ ${channel} เรียบร้อยแล้ว!`, ephemeral: true });
         } catch (error) {
             console.error(error);
