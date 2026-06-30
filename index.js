@@ -91,6 +91,14 @@ client.once(Events.ClientReady, async (c) => {
 
     try {
         if (GUILD_ID) {
+            // ป้องกันคำสั่งซ้ำซ้อน: ล้างคำสั่ง global เก่าทิ้งก่อนเสมอ
+            // (เผื่อเคยรันแบบ global มาก่อนหน้านี้แล้วเปลี่ยนมาใช้ guild)
+            const existingGlobal = await client.application.commands.fetch();
+            if (existingGlobal.size > 0) {
+                await client.application.commands.set([]);
+                console.log(`🧹 ล้างคำสั่ง global เก่าทิ้งแล้ว (${existingGlobal.size} คำสั่ง) เพื่อป้องกันคำสั่งซ้ำ`);
+            }
+
             const guild = await client.guilds.fetch(GUILD_ID);
             const result = await guild.commands.set(commands);
             console.log(`✅ ลงทะเบียนคำสั่งสำเร็จ (guild): ${result.map(c => c.name).join(', ')}`);
