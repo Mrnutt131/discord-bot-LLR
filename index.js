@@ -9,9 +9,9 @@ client.once(Events.ClientReady, async (c) => {
     console.log(`📢 บอทออนไลน์แล้ว: ${c.user.tag}`);
 
     // ตั้งค่าสถานะบอท
-    client.user.setActivity('📣ประกาศข่าวสาร LOMLAYRAK', { type: ActivityType.Playing });
+    client.user.setActivity('📣ประกาศข่าวสารสำคัญของ LOMLAYRAK', { type: ActivityType.Playing });
     setInterval(() => {
-        client.user.setActivity('📣ประกาศข่าวสาร LOMLAYRAK', { type: ActivityType.Playing }); 
+        client.user.setActivity('📣ประกาศข่าวสารสำคัญของ LOMLAYRAK', { type: ActivityType.Playing }); 
     }, 60000);
 
     // ลงทะเบียนคำสั่ง Slash Command (แบบ Global)
