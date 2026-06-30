@@ -12,8 +12,6 @@ const ALLOWED_ROLE_IDS = ['1507970908743270583', '1507972049124069427'];
 // ถ้าไม่ใส่ จะลงทะเบียนแบบ global แทน
 const GUILD_ID = process.env.GUILD_ID || null;
 
-const EMOJIS = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
-
 function hasPermission(interaction) {
     if (!interaction.member || !interaction.member.roles) return false;
     return interaction.member.roles.cache.some(r => ALLOWED_ROLE_IDS.includes(r.id));
@@ -41,7 +39,7 @@ client.once(Events.ClientReady, async (c) => {
         },
         {
             name: 'poll',
-            description: 'สร้างโหวตแบบหลายตัวเลือก',
+            description: 'สร้างโหวตแบบ Discord Poll (กดปุ่มโหวตได้จริง)',
             options: [
                 { name: 'channel', description: 'ห้องที่ต้องการส่ง', type: 7, required: true },
                 { name: 'question', description: 'หัวข้อโหวต', type: 3, required: true },
@@ -51,7 +49,20 @@ client.once(Events.ClientReady, async (c) => {
                     type: 3,
                     required: i < 2
                 })),
-                { name: 'file', description: 'แนบรูปภาพ', type: 11, required: false }
+                {
+                    name: 'duration_hours',
+                    description: 'ระยะเวลาเปิดโหวต (ชั่วโมง, ค่าเริ่มต้น 24)',
+                    type: 4,
+                    required: false,
+                    min_value: 1,
+                    max_value: 768
+                },
+                {
+                    name: 'multiselect',
+                    description: 'ให้เลือกได้มากกว่า 1 ตัวเลือกหรือไม่ (ค่าเริ่มต้น: เลือกได้แค่ 1)',
+                    type: 5,
+                    required: false
+                }
             ]
         },
         {
@@ -135,32 +146,29 @@ client.on(Events.InteractionCreate, async interaction => {
             await interaction.reply({ content: '✅ ประกาศส่งแล้ว!', ephemeral: true });
         }
 
-        // --- สร้างโหวต ---
+        // --- สร้างโหวต (Discord Native Poll) ---
         if (interaction.commandName === 'poll') {
             const channel = interaction.options.getChannel('channel');
             const question = interaction.options.getString('question');
-            const file = interaction.options.getAttachment('file');
+            const durationHours = interaction.options.getInteger('duration_hours') ?? 24;
+            const multiselect = interaction.options.getBoolean('multiselect') ?? false;
 
-            let pollContent = `**📊 หัวข้อโหวต:**\n${question}\n\n`;
-            const optionsList = [];
-
+            const answers = [];
             for (let i = 1; i <= 10; i++) {
                 const opt = interaction.options.getString(`option${i}`);
                 if (opt) {
-                    pollContent += `${EMOJIS[i - 1]} ${opt}\n`;
-                    optionsList.push(EMOJIS[i - 1]);
+                    answers.push({ text: opt });
                 }
             }
 
-            const pollMsg = await channel.send({ content: pollContent, files: file ? [file] : [] });
-
-            for (const emoji of optionsList) {
-                try {
-                    await pollMsg.react(emoji);
-                } catch (reactErr) {
-                    console.error(`⚠️ ใส่ reaction ${emoji} ไม่สำเร็จ:`, reactErr.message);
+            await channel.send({
+                poll: {
+                    question: { text: question },
+                    answers: answers,
+                    duration: durationHours,
+                    allowMultiselect: multiselect
                 }
-            }
+            });
 
             await interaction.reply({ content: '✅ สร้างโหวตเรียบร้อย!', ephemeral: true });
         }
