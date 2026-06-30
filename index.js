@@ -1,24 +1,33 @@
 import 'dotenv/config';
-import { Client, Events, GatewayIntentBits, ActivityType } from 'discord.js';
+import { Client, Events, GatewayIntentBits, ActivityType, PermissionFlagsBits } from 'discord.js';
 
-// กำหนด Intent ให้ครอบคลุมการตรวจสอบยศ
-const client = new Client({ 
-    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers] 
+const client = new Client({
+    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers]
 });
 
 // ใส่ ID ยศที่อนุญาตให้ใช้งานที่นี่
-const ALLOWED_ROLE_IDS = ['ID_ยศ_1', 'ID_ยศ_2']; 
+const ALLOWED_ROLE_IDS = ['1507970908743270583', '1507972049124069427'];
+
+// ใส่ Guild ID เพื่อให้คำสั่งอัปเดตเร็ว (ไม่ต้องรอ global sync นานสุด 1 ชม.)
+// ถ้าไม่ใส่ จะลงทะเบียนแบบ global แทน
+const GUILD_ID = process.env.GUILD_ID || null;
+
+const EMOJIS = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
+
+function hasPermission(interaction) {
+    if (!interaction.member || !interaction.member.roles) return false;
+    return interaction.member.roles.cache.some(r => ALLOWED_ROLE_IDS.includes(r.id));
+}
 
 client.once(Events.ClientReady, async (c) => {
     console.log(`📢 บอทออนไลน์แล้ว: ${c.user.tag}`);
 
     client.user.setActivity('📣ประกาศข่าวสาร LOMLAYRAK', { type: ActivityType.Playing });
     setInterval(() => {
-        client.user.setActivity('📣ประกาศข่าวสาร LOMLAYRAK', { type: ActivityType.Playing }); 
+        client.user.setActivity('📣ประกาศข่าวสาร LOMLAYRAK', { type: ActivityType.Playing });
     }, 60000);
 
-    // ลงทะเบียนคำสั่ง
-    await client.application.commands.set([
+    const commands = [
         {
             name: 'broadcast',
             description: 'ประกาศข่าวสารทั่วไป',
@@ -26,7 +35,8 @@ client.once(Events.ClientReady, async (c) => {
                 { name: 'channel', description: 'ห้องที่ต้องการส่ง', type: 7, required: true },
                 { name: 'title', description: 'หัวข้อประกาศ', type: 3, required: true },
                 { name: 'message', description: 'เนื้อหา', type: 3, required: true },
-                { name: 'file', description: 'แนบรูปภาพ', type: 11, required: false }
+                { name: 'file', description: 'แนบรูปภาพ', type: 11, required: false },
+                { name: 'mention_everyone', description: 'แท็ก @everyone ด้วยหรือไม่', type: 5, required: false }
             ]
         },
         {
@@ -43,52 +53,171 @@ client.once(Events.ClientReady, async (c) => {
                 })),
                 { name: 'file', description: 'แนบรูปภาพ', type: 11, required: false }
             ]
+        },
+        {
+            name: 'announce-schedule',
+            description: 'ตั้งเวลาส่งประกาศล่วงหน้า',
+            options: [
+                { name: 'channel', description: 'ห้องที่ต้องการส่ง', type: 7, required: true },
+                { name: 'minutes', description: 'จำนวนนาทีก่อนส่ง (เช่น 10)', type: 4, required: true, min_value: 1, max_value: 1440 },
+                { name: 'title', description: 'หัวข้อประกาศ', type: 3, required: true },
+                { name: 'message', description: 'เนื้อหา', type: 3, required: true }
+            ]
+        },
+        {
+            name: 'clear',
+            description: 'ลบข้อความในห้องนี้',
+            options: [
+                { name: 'amount', description: 'จำนวนข้อความที่ต้องการลบ (1-100)', type: 4, required: true, min_value: 1, max_value: 100 }
+            ]
+        },
+        {
+            name: 'lock',
+            description: 'ล็อกห้องนี้ไม่ให้สมาชิกทั่วไปพิมพ์ได้'
+        },
+        {
+            name: 'unlock',
+            description: 'ปลดล็อกห้องนี้ให้พิมพ์ได้ตามปกติ'
+        },
+        {
+            name: 'remind',
+            description: 'ตั้งเตือนความจำในห้องนี้',
+            options: [
+                { name: 'minutes', description: 'จำนวนนาทีก่อนเตือน', type: 4, required: true, min_value: 1, max_value: 1440 },
+                { name: 'message', description: 'ข้อความเตือน', type: 3, required: true }
+            ]
         }
-    ]);
+    ];
+
+    try {
+        if (GUILD_ID) {
+            const guild = await client.guilds.fetch(GUILD_ID);
+            const result = await guild.commands.set(commands);
+            console.log(`✅ ลงทะเบียนคำสั่งสำเร็จ (guild): ${result.map(c => c.name).join(', ')}`);
+        } else {
+            const result = await client.application.commands.set(commands);
+            console.log(`✅ ลงทะเบียนคำสั่งสำเร็จ (global, อาจใช้เวลาถึง 1 ชม. กว่าจะ sync): ${result.map(c => c.name).join(', ')}`);
+        }
+    } catch (err) {
+        console.error('❌ ลงทะเบียนคำสั่งล้มเหลว:', err);
+    }
 });
 
 client.on(Events.InteractionCreate, async interaction => {
     if (!interaction.isChatInputCommand()) return;
 
-    // ตรวจสอบสิทธิ์ยศ
-    const hasPermission = interaction.member.roles.cache.some(r => ALLOWED_ROLE_IDS.includes(r.id));
-    if (!hasPermission) {
-        return interaction.reply({ content: '❌ คุณไม่มีสิทธิ์ใช้งานคำสั่งนี้', ephemeral: true });
-    }
-
-    // --- ประกาศข่าวสาร ---
-    if (interaction.commandName === 'broadcast') {
-        const channel = interaction.options.getChannel('channel');
-        const title = interaction.options.getString('title');
-        const message = interaction.options.getString('message');
-        const file = interaction.options.getAttachment('file');
-
-        await channel.send({ content: `**📢 ${title.toUpperCase()}**\n\n${message}`, files: file ? [file] : [] });
-        await interaction.reply({ content: '✅ ประกาศส่งแล้ว!', ephemeral: true });
-    }
-
-    // --- สร้างโหวต ---
-    if (interaction.commandName === 'poll') {
-        const channel = interaction.options.getChannel('channel');
-        const question = interaction.options.getString('question');
-        const file = interaction.options.getAttachment('file');
-        
-        const emojis = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
-        let pollContent = `**📊 หัวข้อโหวต:**\n${question}\n\n`;
-        let optionsList = [];
-
-        for (let i = 1; i <= 10; i++) {
-            const opt = interaction.options.getString(`option${i}`);
-            if (opt) {
-                pollContent += `${emojis[i - 1]} ${opt}\n`;
-                optionsList.push(emojis[i - 1]);
-            }
+    try {
+        if (!hasPermission(interaction)) {
+            return interaction.reply({ content: '❌ คุณไม่มีสิทธิ์ใช้งานคำสั่งนี้', ephemeral: true });
         }
 
-        const pollMsg = await channel.send({ content: pollContent, files: file ? [file] : [] });
-        for (const emoji of optionsList) await pollMsg.react(emoji);
-        
-        await interaction.reply({ content: '✅ สร้างโหวตเรียบร้อย!', ephemeral: true });
+        // --- ประกาศข่าวสาร ---
+        if (interaction.commandName === 'broadcast') {
+            const channel = interaction.options.getChannel('channel');
+            const title = interaction.options.getString('title');
+            const message = interaction.options.getString('message');
+            const file = interaction.options.getAttachment('file');
+            const mentionEveryone = interaction.options.getBoolean('mention_everyone');
+
+            const prefix = mentionEveryone ? '@everyone\n' : '';
+            await channel.send({
+                content: `${prefix}**📢 ${title.toUpperCase()}**\n\n${message}`,
+                files: file ? [file] : []
+            });
+            await interaction.reply({ content: '✅ ประกาศส่งแล้ว!', ephemeral: true });
+        }
+
+        // --- สร้างโหวต ---
+        if (interaction.commandName === 'poll') {
+            const channel = interaction.options.getChannel('channel');
+            const question = interaction.options.getString('question');
+            const file = interaction.options.getAttachment('file');
+
+            let pollContent = `**📊 หัวข้อโหวต:**\n${question}\n\n`;
+            const optionsList = [];
+
+            for (let i = 1; i <= 10; i++) {
+                const opt = interaction.options.getString(`option${i}`);
+                if (opt) {
+                    pollContent += `${EMOJIS[i - 1]} ${opt}\n`;
+                    optionsList.push(EMOJIS[i - 1]);
+                }
+            }
+
+            const pollMsg = await channel.send({ content: pollContent, files: file ? [file] : [] });
+
+            for (const emoji of optionsList) {
+                try {
+                    await pollMsg.react(emoji);
+                } catch (reactErr) {
+                    console.error(`⚠️ ใส่ reaction ${emoji} ไม่สำเร็จ:`, reactErr.message);
+                }
+            }
+
+            await interaction.reply({ content: '✅ สร้างโหวตเรียบร้อย!', ephemeral: true });
+        }
+
+        // --- ตั้งเวลาประกาศล่วงหน้า ---
+        if (interaction.commandName === 'announce-schedule') {
+            const channel = interaction.options.getChannel('channel');
+            const minutes = interaction.options.getInteger('minutes');
+            const title = interaction.options.getString('title');
+            const message = interaction.options.getString('message');
+
+            await interaction.reply({ content: `✅ ตั้งเวลาประกาศใน ${minutes} นาทีแล้ว`, ephemeral: true });
+
+            setTimeout(async () => {
+                try {
+                    await channel.send({ content: `**📢 ${title.toUpperCase()}**\n\n${message}` });
+                } catch (err) {
+                    console.error('❌ ส่งประกาศตามเวลาล้มเหลว:', err);
+                }
+            }, minutes * 60 * 1000);
+        }
+
+        // --- ลบข้อความ ---
+        if (interaction.commandName === 'clear') {
+            const amount = interaction.options.getInteger('amount');
+            await interaction.deferReply({ ephemeral: true });
+            const deleted = await interaction.channel.bulkDelete(amount, true);
+            await interaction.editReply({ content: `✅ ลบข้อความแล้ว ${deleted.size} ข้อความ` });
+        }
+
+        // --- ล็อก/ปลดล็อกห้อง ---
+        if (interaction.commandName === 'lock' || interaction.commandName === 'unlock') {
+            const lock = interaction.commandName === 'lock';
+            await interaction.channel.permissionOverwrites.edit(interaction.guild.roles.everyone, {
+                SendMessages: lock ? false : null
+            });
+            await interaction.reply({ content: lock ? '🔒 ล็อกห้องนี้แล้ว' : '🔓 ปลดล็อกห้องนี้แล้ว', ephemeral: true });
+        }
+
+        // --- ตั้งเตือนความจำ ---
+        if (interaction.commandName === 'remind') {
+            const minutes = interaction.options.getInteger('minutes');
+            const message = interaction.options.getString('message');
+            const channel = interaction.channel;
+            const user = interaction.user;
+
+            await interaction.reply({ content: `⏰ ตั้งเตือนแล้ว จะแจ้งใน ${minutes} นาที`, ephemeral: true });
+
+            setTimeout(async () => {
+                try {
+                    await channel.send({ content: `⏰ <@${user.id}> ถึงเวลาแล้ว: ${message}` });
+                } catch (err) {
+                    console.error('❌ ส่งการเตือนล้มเหลว:', err);
+                }
+            }, minutes * 60 * 1000);
+        }
+
+    } catch (err) {
+        console.error(`❌ เกิดข้อผิดพลาดในคำสั่ง /${interaction.commandName}:`, err);
+        const errorMsg = { content: '⚠️ เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง', ephemeral: true };
+        if (interaction.deferred || interaction.replied) {
+            await interaction.editReply(errorMsg).catch(() => {});
+        } else {
+            await interaction.reply(errorMsg).catch(() => {});
+        }
     }
 });
 
